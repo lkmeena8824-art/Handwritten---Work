@@ -98,8 +98,321 @@ const VIDEO = {
 
 
 /* ============================================================================
+   4) META PIXEL — CONVERSION TRACKING
+   ----------------------------------------------------------------------------
+   Paste your Meta Pixel ID below (Events Manager → Data Sources → your pixel).
+   Everything else is already wired up.
+
+   ★ THE ONE NUMBER THAT MATTERS ★
+   "Telegram joins" is the conversion this site counts. There are several
+   Telegram buttons across the page, but a visitor is counted ONCE no matter how
+   many of them they tap — see `dedupe` below. WhatsApp is support only and is
+   NOT counted as a conversion.
+   ============================================================================ */
+const PIXEL = {
+
+  /* ---- Your Meta Pixel ID, e.g. "1234567890123456" ---------------------- */
+  pixelId: "",
+
+  /* ---- The event fired when someone taps ANY Telegram button ------------
+     "Lead" is the standard event to optimise for. You can also use
+     "Contact", "Subscribe" or "CompleteRegistration".                      */
+  telegramEvent: "Lead",
+  telegramIsStandard: true,   // true = standard Meta event, false = custom event
+
+  /* ---- One visitor = one conversion ------------------------------------
+     "session"  → counted once per visit (RECOMMENDED — a returning visitor who
+                  converts again later is a genuine second conversion)
+     "forever"  → counted once per browser, ever
+     "never"    → counted on every tap (not recommended: one keen visitor can
+                  look like ten conversions and spoil your ad optimisation)   */
+  dedupe: "session",
+
+  /* ---- Optional value sent with the conversion (0 = do not send) --------
+     Only useful if you track revenue. Leave 0 for lead generation.          */
+  value: 0,
+  currency: "INR",
+
+  /* ---- WhatsApp: SUPPORT ONLY — keep this OFF ---------------------------
+     These are people asking a question, not joining. If you switch this on,
+     it fires a custom event that must never be selected as a conversion in
+     Ads Manager.                                                            */
+  trackWhatsApp: false,
+
+  /* ---- Diagnostic events (custom, never conversions) --------------------
+     Useful for seeing how far people get down the page.                     */
+  trackFormSubmit: true,      // fires "ApplicationSubmitted" after a valid form submission
+  trackVideoPlay: true,       // fires "VideoPlay" when the video section is opened
+
+  /* ---- Advanced matching -------------------------------------------------
+     Sends a hashed (SHA-256) version of the applicant's email / mobile /
+     name after they submit the form, which noticeably improves how well Meta
+     matches your ads to real people. Hashed values cannot be reversed.      */
+  advancedMatching: true,
+
+  /* ---- Cookie consent ----------------------------------------------------
+     false → pixel loads straight away.
+     true  → a small consent banner appears and the pixel loads only if the
+             visitor taps "Accept" (stricter, but you may lose some tracking). */
+  requireConsent: false,
+
+  /* ---- Debugging ---------------------------------------------------------
+     true → every tracking event is logged in the browser console, and
+     HW_Tracking.status() can be run from the console at any time.           */
+  debug: false,
+};
+
+
+/* ============================================================================
    ⚙️  EVERYTHING BELOW THIS LINE IS SITE LOGIC — NO NEED TO EDIT
    ============================================================================ */
+
+/* ============================================================================
+   Tracking module — Meta Pixel
+   One delegated listener catches every Telegram button on the page (header,
+   hero, sticky bar, sections, footer, thank-you page — including buttons added
+   later), so no button needs its own code.
+   ============================================================================ */
+const Tracking = (function () {
+
+  const KEY = {
+    telegram: "hw_px_telegram_conversion",
+    match: "hw_px_match",
+    consent: "hw_px_consent",
+  };
+
+  let ready = false;
+
+  function log() {
+    if (!PIXEL.debug) return;
+    try { console.log.apply(console, ["[tracking]"].concat([].slice.call(arguments))); } catch (e) { /* ignore */ }
+  }
+
+  function store(type) {
+    try { return type === "forever" ? window.localStorage : window.sessionStorage; }
+    catch (e) { return null; }
+  }
+
+  function readStore(type, key) {
+    const s = store(type);
+    if (!s) return null;
+    try { return s.getItem(key); } catch (e) { return null; }
+  }
+
+  function writeStore(type, key, value) {
+    const s = store(type);
+    if (!s) return;
+    try { s.setItem(key, value); } catch (e) { /* storage may be blocked */ }
+  }
+
+  /* ---------- Load the pixel (unless the official snippet is already in) ---------- */
+  function bootstrap() {
+    if (!PIXEL.pixelId) { log("no Pixel ID set — tracking is off"); return false; }
+    if (typeof window.fbq === "function") { ready = true; log("using pixel already installed on the page"); return true; }
+
+    const w = window, d = document;
+    const fbq = (w.fbq = function () {
+      fbq.callMethod ? fbq.callMethod.apply(fbq, arguments) : fbq.queue.push(arguments);
+    });
+    if (!w._fbq) w._fbq = fbq;
+    fbq.push = fbq;
+    fbq.loaded = true;
+    fbq.version = "2.0";
+    fbq.queue = [];
+
+    const s = d.createElement("script");
+    s.async = true;
+    s.src = "https://connect.facebook.net/en_US/fbevents.js";
+    d.head.appendChild(s);
+
+    fbq("init", PIXEL.pixelId);
+    ready = true;
+    log("pixel initialised:", PIXEL.pixelId);
+    return true;
+  }
+
+  /* ---------- Fire an event ---------- */
+  function track(name, params, isStandard, eventId) {
+    if (typeof window.fbq !== "function") { log("skipped (pixel not loaded):", name); return; }
+    const method = isStandard === false ? "trackCustom" : "track";
+    const payload = params || {};
+    if (eventId) window.fbq(method, name, payload, { eventID: eventId });
+    else window.fbq(method, name, payload);
+    log(method, name, payload, eventId ? "eventID=" + eventId : "");
+  }
+
+  /* ---------- Deduplication: one visitor, one conversion ---------- */
+  function shouldCount(key) {
+    const mode = PIXEL.dedupe;
+    if (mode === "never") return true;
+    const type = mode === "forever" ? "forever" : "session";
+    if (readStore(type, key)) return false;   // already counted
+    writeStore(type, key, String(Date.now()));
+    return true;
+  }
+
+  function newEventId(prefix) {
+    return prefix + "." + Date.now() + "." + Math.random().toString(36).slice(2, 8);
+  }
+
+  /* ---------- Which part of the page was the button in? ----------
+     Extra detail on the same single event, so you can see which button people
+     actually use — it does not create additional conversions. */
+  function whereFrom(el) {
+    if (el.closest(".sticky-bar")) return "sticky-mobile-bar";
+    if (el.closest(".final-cta")) return "final-cta";
+    if (el.closest(".site-header")) return "header";
+    if (el.closest("footer")) return "footer";
+    const sec = el.closest("section");
+    if (sec) {
+      if (sec.id) return sec.id;
+      const cls = String(sec.className || "").split(/\s+/).filter(function (c) {
+        return c && c !== "section" && c !== "reveal" && c !== "on-white";
+      })[0];
+      return cls || "section";
+    }
+    const box = el.closest(".form-card, .form-success, .thanks-card");
+    if (box) return "form";
+    return "other";
+  }
+
+  /* ---------- Click tracking ---------- */
+  function bindClicks() {
+    document.addEventListener("click", function (e) {
+      const t = e.target;
+      if (!t || typeof t.closest !== "function") return;
+
+      /* Any Telegram button anywhere — counted once per visitor */
+      const tg = t.closest('a[data-site="telegram"], a.js-telegram, a.js-telegram-text');
+      if (tg && shouldCount(KEY.telegram)) {
+        const params = {
+          content_name: whereFrom(tg),
+          content_category: "telegram-join",
+        };
+        if (PIXEL.value) { params.value = PIXEL.value; params.currency = PIXEL.currency; }
+        track(PIXEL.telegramEvent, params, PIXEL.telegramIsStandard, newEventId("tg"));
+      }
+
+      /* WhatsApp — support only. Off by default, and never a conversion. */
+      if (PIXEL.trackWhatsApp && t.closest('a.js-whatsapp, a.js-whatsapp-text, a[data-site="whatsapp"]')) {
+        track("WhatsAppSupportClick", { content_name: whereFrom(t) }, false);
+      }
+    }, true);   // capture phase: records before the browser opens the link
+  }
+
+  /* ---------- Advanced matching (hashed, privacy-safe) ---------- */
+  function hash(value) {
+    if (!value) return Promise.resolve(null);
+    if (!window.crypto || !window.crypto.subtle || !window.TextEncoder) return Promise.resolve(null);
+    return window.crypto.subtle
+      .digest("SHA-256", new window.TextEncoder().encode(String(value).trim().toLowerCase()))
+      .then(function (buf) {
+        return [].map.call(new Uint8Array(buf), function (b) { return ("0" + b.toString(16)).slice(-2); }).join("");
+      })
+      .catch(function () { return null; });
+  }
+
+  function identify(data) {
+    if (!PIXEL.advancedMatching || !data || typeof window.fbq !== "function") return Promise.resolve();
+
+    const jobs = [
+      hash(data.email).then(function (h) { return ["em", h]; }),
+      hash(data.mobile ? "91" + String(data.mobile).replace(/\D/g, "") : null).then(function (h) { return ["ph", h]; }),
+      hash(data.city ? String(data.city).replace(/\s+/g, "") : null).then(function (h) { return ["ct", h]; }),
+      hash(data.name ? String(data.name).trim().split(/\s+/)[0] : null).then(function (h) { return ["fn", h]; }),
+    ];
+
+    return Promise.all(jobs).then(function (pairs) {
+      const payload = {};
+      pairs.forEach(function (pair) { if (pair[0] && pair[1]) payload[pair[0]] = pair[1]; });
+      if (!Object.keys(payload).length) return;
+      window.fbq("init", PIXEL.pixelId, payload);
+      log("advanced matching set:", Object.keys(payload).join(", "));
+      writeStore("forever", KEY.match, JSON.stringify(payload));
+    });
+  }
+
+  /* ---------- Optional consent banner ---------- */
+  function showBanner(callback) {
+    const bar = document.createElement("div");
+    bar.className = "consent-bar";
+    bar.setAttribute("role", "dialog");
+    bar.setAttribute("aria-label", "Cookie choices");
+    bar.innerHTML =
+      '<p>We use measurement cookies to see which of our adverts bring people to this page. ' +
+      'These help us improve our advertising. See our <a href="privacy-policy.html">Privacy Policy</a>.</p>' +
+      '<div class="cta-row">' +
+      '<button type="button" class="btn btn-outline" data-consent="denied">Decline</button>' +
+      '<button type="button" class="btn btn-primary" data-consent="granted">Accept</button>' +
+      '</div>';
+    document.body.appendChild(bar);
+    bar.addEventListener("click", function (e) {
+      const btn = e.target.closest("[data-consent]");
+      if (!btn) return;
+      bar.remove();
+      callback(btn.getAttribute("data-consent") === "granted");
+    });
+  }
+
+  function withConsent(callback) {
+    if (!PIXEL.requireConsent) { callback(); return; }
+    const choice = readStore("forever", KEY.consent);
+    if (choice === "granted") { callback(); return; }
+    if (choice === "denied") { log("pixel not loaded — visitor declined measurement cookies"); return; }
+    showBanner(function (granted) {
+      writeStore("forever", KEY.consent, granted ? "granted" : "denied");
+      if (granted) callback();
+      else log("pixel not loaded — visitor declined measurement cookies");
+    });
+  }
+
+  /* ---------- Init (safe to call more than once) ---------- */
+  let inited = false;
+
+  function init() {
+    if (inited) return;
+    inited = true;
+    if (!PIXEL.pixelId) { log("tracking disabled — paste your Pixel ID into PIXEL.pixelId in this file"); inited = false; return; }
+    withConsent(function () {
+      if (!bootstrap()) return;
+      track("PageView");
+      // Re-apply advanced matching details gathered on a previous step
+      if (PIXEL.advancedMatching) {
+        try {
+          const saved = JSON.parse(readStore("forever", KEY.match) || "null");
+          if (saved && Object.keys(saved).length) window.fbq("init", PIXEL.pixelId, saved);
+        } catch (e) { /* ignore */ }
+      }
+      bindClicks();
+    });
+  }
+
+  return {
+    init: init,
+    identify: identify,
+    event: track,
+    /* Run HW_Tracking.status() in the browser console to check your setup */
+    status: function () {
+      const counted = PIXEL.dedupe === "never"
+        ? false
+        : !!readStore(PIXEL.dedupe === "forever" ? "forever" : "session", KEY.telegram);
+      const out = {
+        "Pixel ID": PIXEL.pixelId || "(not set — tracking is off)",
+        "Pixel loaded": typeof window.fbq === "function",
+        "Telegram conversion event": PIXEL.telegramEvent,
+        "Deduplication mode": PIXEL.dedupe,
+        "WhatsApp tracking": PIXEL.trackWhatsApp ? "ON — must not be used as a conversion" : "off (support only)",
+        "Form submit event": PIXEL.trackFormSubmit ? "ApplicationSubmitted (custom)" : "off",
+        "Video play event": PIXEL.trackVideoPlay ? "VideoPlay (custom)" : "off",
+        "Advanced matching": PIXEL.advancedMatching ? "on (hashed)" : "off",
+        "Consent banner": PIXEL.requireConsent ? "required" : "not required",
+        "Debug logging": PIXEL.debug ? "on" : "off",
+      };
+      out["Conversion already counted this " + (PIXEL.dedupe === "forever" ? "browser" : "visit")] = counted;
+      return out;
+    },
+  };
+})();
 
 /* ---------- Small helpers ---------- */
 const isPlaceholder = (v) =>
@@ -200,6 +513,7 @@ function applySite() {
 /* ---------- Warn (only) while placeholder details are still in use ---------- */
 function configWarning() {
   const missing = [];
+  if (!PIXEL.pixelId) missing.push("Meta Pixel ID");
   if (isPlaceholder(SITE.telegramUrl)) missing.push("Telegram link");
   if (isPlaceholder(SITE.whatsappNumber)) missing.push("WhatsApp number");
   if (isPlaceholder(SITE.supportEmail)) missing.push("support email");
@@ -209,7 +523,8 @@ function configWarning() {
   bar.className = "config-bar";
   bar.innerHTML =
     '<strong>Setup needed:</strong> add your ' + missing.join(", ") +
-    ' in <code>assets/js/main.js</code> — this bar disappears automatically once real details are saved.';
+    ' in <code>assets/js/main.js</code> — this bar disappears automatically once real details are saved.' +
+    (PIXEL.pixelId ? "" : " (Tracking stays off until the Pixel ID is added.)");
   document.body.prepend(bar);
 }
 
@@ -228,6 +543,7 @@ function initVideo() {
     const embed = VIDEO.youtubeUrl ? youtubeEmbed(VIDEO.youtubeUrl) : null;
 
     if (embed) {
+      if (PIXEL.trackVideoPlay) Tracking.event("VideoPlay", { content_name: "how-it-works" }, false);
       stage.innerHTML = '<iframe src="' + embed + '" title="' + VIDEO.title +
         '" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
       stage.classList.add("playing");
@@ -235,6 +551,7 @@ function initVideo() {
     }
 
     if (VIDEO.mp4Url) {
+      if (PIXEL.trackVideoPlay) Tracking.event("VideoPlay", { content_name: "how-it-works" }, false);
       stage.innerHTML = '<video controls autoplay playsinline poster="' + (poster || "") +
         '"><source src="' + VIDEO.mp4Url + '" type="video/mp4" /></video>';
       stage.classList.add("playing");
@@ -358,6 +675,17 @@ function initForm() {
       localStorage.setItem("hw_applications", JSON.stringify(all));
     } catch (err) { /* storage may be blocked — ignore */ }
 
+    // Improve ad matching with a hashed copy of the applicant's details,
+    // then record the submission (a diagnostic event — Telegram stays the only
+    // conversion this website counts).
+    Tracking.identify(data);
+    if (PIXEL.trackFormSubmit) {
+      Tracking.event("ApplicationSubmitted", {
+        content_name: "application-form",
+        hours_available: data.dailyHours,
+      }, false);
+    }
+
     if (SITE.formEndpoint) {
       fetch(SITE.formEndpoint, {
         method: "POST",
@@ -436,6 +764,8 @@ function initNav() {
 
 /* ---------- Init ---------- */
 document.addEventListener("DOMContentLoaded", function () {
+  Tracking.init();          // Meta Pixel + conversion tracking
+  window.HW_Tracking = Tracking;
   applyImages();
   applySite();
   configWarning();

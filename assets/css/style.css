@@ -559,6 +559,26 @@ html.js .reveal.in { opacity: 1; transform: none; }
 .thanks-steps { text-align: left; margin: 1.6rem 0; display: grid; gap: .7rem; }
 .thanks-steps li { display: flex; gap: .65rem; align-items: flex-start; font-size: .9rem; color: var(--ink-soft); }
 
+/* ---------- Cookie consent bar (only shown if PIXEL.requireConsent is true) ---------- */
+.consent-bar {
+  position: fixed; left: 0; right: 0; bottom: 4.7rem; z-index: 80;
+  background: #071a33; color: #fff;
+  padding: .95rem 1.15rem calc(.95rem);
+  display: grid; gap: .75rem; box-shadow: 0 -10px 30px rgba(0, 0, 0, .3);
+}
+.consent-bar p { margin: 0; font-size: .82rem; line-height: 1.55; color: rgba(255, 255, 255, .86); }
+.consent-bar a { color: #9ec5ff; text-decoration: underline; }
+.consent-bar .cta-row { gap: .5rem; }
+.consent-bar .btn { padding: .62rem 1.1rem; font-size: .85rem; }
+.consent-bar .btn-outline { --btn-bg: transparent; --btn-fg: #fff; border-color: rgba(255, 255, 255, .35); }
+@media (min-width: 640px) {
+  .consent-bar {
+    bottom: 0; left: auto; right: 1.1rem; max-width: 34rem;
+    grid-template-columns: 1fr; border-radius: var(--r) var(--r) 0 0;
+  }
+  .consent-bar .cta-row { justify-content: flex-end; }
+}
+
 /* ---------- Utilities ---------- */
 .text-center { text-align: center; }
 .mt-1 { margin-top: .5rem; } .mt-2 { margin-top: 1rem; } .mt-3 { margin-top: 1.6rem; }
