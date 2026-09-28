@@ -1,0 +1,8 @@
+# HandWrite Work — robots.txt
+# Replace the Sitemap line below with your own domain once the site is live.
+
+User-agent: *
+Allow: /
+Disallow: /thank-you.html
+
+Sitemap: https://yourdomain.com/sitemap.xml
