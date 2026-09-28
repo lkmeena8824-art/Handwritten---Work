@@ -110,6 +110,12 @@ function waLink(message, number) {
   return "https://wa.me/" + n + "?text=" + encodeURIComponent(message || SITE.supportMessage);
 }
 
+function scrollToCentre(el) {
+  if (el && typeof el.scrollIntoView === "function") {
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+}
+
 function youtubeEmbed(url) {
   const m = String(url).match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([A-Za-z0-9_-]{6,})/);
   return m ? "https://www.youtube-nocookie.com/embed/" + m[1] + "?autoplay=1&rel=0" : null;
@@ -244,6 +250,30 @@ function initVideo() {
   });
 }
 
+/* ---------- Build the full application summary for WhatsApp ---------- */
+function buildApplyMessage(data) {
+  if (!data) return null;
+  return SITE.applyMessage + "\n\n" +
+    "Name: " + data.name + "\n" +
+    "Mobile: " + data.mobile + "\n" +
+    "Email: " + (data.email || "-") + "\n" +
+    "City: " + data.city + "\n" +
+    "Education: " + data.education + "\n" +
+    "Hours available daily: " + data.dailyHours + "\n" +
+    "Experience: " + (data.experience || "-") + "\n" +
+    "Message: " + (data.message || "-");
+}
+
+function setApplyButtons(data) {
+  const msg = buildApplyMessage(data);
+  if (!msg) return;
+  document.querySelectorAll(".js-whatsapp-app").forEach(function (el) {
+    el.href = waLink(msg);
+    el.target = "_blank";
+    el.rel = "noopener";
+  });
+}
+
 /* ---------- Application form ---------- */
 function initForm() {
   const form = document.getElementById("applyForm");
@@ -303,8 +333,7 @@ function initForm() {
     if (form.querySelector(".hp input").value) return; // honeypot: silently stop bots
 
     if (!validate()) {
-      const firstBad = form.querySelector(".invalid");
-      if (firstBad) firstBad.scrollIntoView({ behavior: "smooth", block: "center" });
+      scrollToCentre(form.querySelector(".invalid"));
       return;
     }
 
@@ -336,15 +365,21 @@ function initForm() {
         body: JSON.stringify(data),
       })
         .then(function () { location.href = "thank-you.html"; })
-        .catch(function () { formWrap.style.display = "none"; successBox.classList.add("show"); successBox.scrollIntoView({ behavior: "smooth", block: "center" }); });
+        .catch(function () {
+          formWrap.style.display = "none";
+          successBox.classList.add("show");
+          scrollToCentre(successBox);
+        });
       return;
     }
 
-    // No endpoint: show success box, then the thank-you page takes over
+    // No endpoint: the WhatsApp button in the success box carries the application,
+    // so it works immediately; the thank-you page repeats it with the same summary.
+    setApplyButtons(data);
     formWrap.style.display = "none";
     successBox.classList.add("show");
-    successBox.scrollIntoView({ behavior: "smooth", block: "center" });
-    setTimeout(function () { location.href = "thank-you.html"; }, 1200);
+    scrollToCentre(successBox);
+    setTimeout(function () { location.href = "thank-you.html"; }, 2600);
   });
 }
 
@@ -357,17 +392,7 @@ function initThankYou() {
   try { data = JSON.parse(localStorage.getItem("hw_last_application") || "null"); } catch (e) { data = null; }
 
   if (!data) return;
-  btn.href = waLink(
-    SITE.applyMessage + "\n\n" +
-    "Name: " + data.name + "\n" +
-    "Mobile: " + data.mobile + "\n" +
-    "Email: " + (data.email || "-") + "\n" +
-    "City: " + data.city + "\n" +
-    "Education: " + data.education + "\n" +
-    "Hours available daily: " + data.dailyHours + "\n" +
-    "Experience: " + (data.experience || "-") + "\n" +
-    "Message: " + (data.message || "-")
-  );
+  setApplyButtons(data);
 }
 
 /* ---------- Reveal on scroll ---------- */
