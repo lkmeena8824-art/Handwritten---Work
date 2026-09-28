@@ -579,6 +579,78 @@ html.js .reveal.in { opacity: 1; transform: none; }
   .consent-bar .cta-row { justify-content: flex-end; }
 }
 
+/* ---------- Promise band (trust section) ---------- */
+.promise-band {
+  margin-top: 1.6rem; background: var(--bg); border: 1px solid var(--line);
+  border-radius: var(--r-lg); padding: 1.35rem 1.3rem;
+}
+.promise-band h3 { margin-bottom: .9rem; }
+.promise-row { display: grid; gap: .6rem; margin-bottom: 1.1rem; }
+.promise-row li { display: flex; align-items: flex-start; gap: .6rem; font-size: .9rem; color: var(--ink-soft); }
+.promise-row .tk { background: rgba(220, 38, 38, .1); color: var(--danger); }
+
+/* ---------- Legal document pop-up ---------- */
+.doc-row { display: flex; flex-wrap: wrap; gap: .4rem; }
+.doc-btn {
+  font: inherit; font-size: .76rem; font-weight: 600; cursor: pointer;
+  padding: .42rem .82rem; border-radius: 999px;
+  background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .16); color: #cfe0ff;
+  transition: background .16s ease, color .16s ease, border-color .16s ease;
+}
+.doc-btn:hover { background: rgba(255, 255, 255, .16); color: #fff; }
+.doc-btn[aria-expanded="true"] { background: #fff; color: var(--navy); border-color: #fff; }
+.doc-btn-inline {
+  background: var(--primary-50); border-color: #d8e3fb; color: var(--primary-600);
+}
+.doc-btn-inline:hover { background: #e2eafd; color: var(--primary-600); }
+.doc-btn-inline[aria-expanded="true"] { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 95; padding: 1rem;
+  background: rgba(6, 20, 38, .62); backdrop-filter: blur(4px);
+  display: grid; place-items: center; animation: fadeIn .18s ease both;
+}
+.modal-backdrop[hidden] { display: none; }
+.modal {
+  background: #fff; color: var(--ink); width: 100%; max-width: 46rem; max-height: 86vh;
+  border-radius: var(--r-lg); display: flex; flex-direction: column; overflow: hidden;
+  box-shadow: var(--sh-3); animation: riseIn .22s ease both;
+}
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: .85rem 1.15rem; border-bottom: 1px solid var(--line); flex: 0 0 auto;
+}
+.modal-head h3 { margin: 0; font-size: 1.02rem; }
+.modal-close {
+  width: 34px; height: 34px; flex: 0 0 auto; cursor: pointer;
+  border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink-soft);
+  display: grid; place-items: center; transition: background .16s ease, color .16s ease;
+}
+.modal-close:hover { background: var(--bg); color: var(--navy); }
+.modal-body { padding: 1.15rem 1.25rem 1.5rem; overflow-y: auto; overscroll-behavior: contain; }
+.modal-body .legal-body { padding: 0; max-width: none; }
+.modal-body h2 { font-size: 1.08rem; margin-top: 1.7rem; }
+.modal-body h2:first-child { margin-top: 0; }
+.modal-body h3 { font-size: .98rem; }
+.modal-body p, .modal-body li { font-size: .9rem; }
+.modal-body .legal-table { font-size: .84rem; }
+.modal-loading { color: var(--ink-mute); font-size: .9rem; }
+.modal-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap;
+  padding: .7rem 1.15rem; border-top: 1px solid var(--line); background: #fbfcfe;
+  font-size: .76rem; color: var(--ink-mute); flex: 0 0 auto;
+}
+.modal-foot a { font-weight: 600; }
+body.modal-open { overflow: hidden; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes riseIn { from { opacity: 0; transform: translateY(10px) scale(.99); } to { opacity: 1; transform: none; } }
+
+@media (max-width: 639px) {
+  .modal { max-height: 92vh; border-radius: var(--r); }
+  .modal-body { padding: 1rem 1rem 1.3rem; }
+}
+
 /* ---------- Utilities ---------- */
 .text-center { text-align: center; }
 .mt-1 { margin-top: .5rem; } .mt-2 { margin-top: 1rem; } .mt-3 { margin-top: 1.6rem; }
@@ -592,6 +664,7 @@ html.js .reveal.in { opacity: 1; transform: none; }
   .steps { grid-template-columns: repeat(2, 1fr); }
   .verified-grid { grid-template-columns: repeat(2, 1fr); }
   .sec-grid { grid-template-columns: repeat(2, 1fr); }
+  .promise-row { grid-template-columns: repeat(2, 1fr); }
   .channels { grid-template-columns: repeat(2, 1fr); }
   .form-row.two { grid-template-columns: repeat(2, 1fr); }
   .footer-grid { grid-template-columns: repeat(2, 1fr); }

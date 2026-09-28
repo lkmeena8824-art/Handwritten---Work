@@ -414,6 +414,207 @@ const Tracking = (function () {
   };
 })();
 
+/* ============================================================================
+   Documents module — legal pages open in a pop-up
+   The footer carries small buttons instead of a wall of links. Tapping a button
+   opens that document in a modal; tapping the same button again closes it.
+   The full standalone pages still exist for Meta ad review and for anyone who
+   wants a direct link.
+   ============================================================================ */
+const DOCS = {
+  privacy:    { title: "Privacy Policy",     file: "privacy-policy.html", url: "privacy-policy.html" },
+  terms:      { title: "Terms & Conditions", file: "terms.html",           url: "terms.html" },
+  security:   { title: "Data Security",      file: "data-security.html",   url: "data-security.html" },
+  cookies:    { title: "Cookies & Tracking", file: "privacy-policy.html", anchor: "cookies",    url: "privacy-policy.html#cookies" },
+  disclaimer: { title: "Disclaimer",         file: "terms.html",          anchor: "disclaimer", url: "terms.html#disclaimer" },
+  deletion:   { title: "Delete My Data",     file: "data-security.html",  anchor: "deletion",   url: "data-security.html#deletion" },
+};
+
+const Docs = (function () {
+
+  const cache = {};          // file -> Promise of { html, updated }
+  let modal = null, body = null, titleEl = null, updatedEl = null, fullLink = null;
+  let currentKey = null, lastTrigger = null;
+
+  /* ---------- Build the modal once, on first use ---------- */
+  function build() {
+    if (modal) return;
+
+    modal = document.createElement("div");
+    modal.className = "modal-backdrop";
+    modal.setAttribute("hidden", "");
+    modal.innerHTML =
+      '<div class="modal" role="dialog" aria-modal="true" aria-labelledby="docModalTitle">' +
+        '<div class="modal-head">' +
+          '<h3 id="docModalTitle">Document</h3>' +
+          '<button type="button" class="modal-close" aria-label="Close">' +
+            '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+          '</button>' +
+        '</div>' +
+        '<div class="modal-body" tabindex="-1"><p class="modal-loading">Loading…</p></div>' +
+        '<div class="modal-foot">' +
+          '<span class="modal-updated"></span>' +
+          '<a class="modal-full" href="#" target="_blank" rel="noopener">Open as a full page →</a>' +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(modal);
+    body = modal.querySelector(".modal-body");
+    titleEl = modal.querySelector("#docModalTitle");
+    updatedEl = modal.querySelector(".modal-updated");
+    fullLink = modal.querySelector(".modal-full");
+
+    modal.addEventListener("click", function (e) {
+      if (e.target === modal || e.target.closest(".modal-close")) close();
+    });
+
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && currentKey) close();
+    });
+
+    /* Links inside a document: keep legal cross-links inside the pop-up */
+    body.addEventListener("click", function (e) {
+      const a = e.target.closest("a");
+      if (!a) return;
+      const href = a.getAttribute("href") || "";
+
+      const file = href.split("#")[0];
+      if (file && DOCS_KEYS_SOME(file)) {
+        e.preventDefault();
+        const key = keyForFile(file);
+        const anchor = href.split("#")[1];
+        open(key, anchor);
+        return;
+      }
+      if (href.charAt(0) === "#") {
+        e.preventDefault();
+        scrollInBody(href.slice(1));
+      }
+    });
+  }
+
+  function DOCS_KEYS_SOME(file) {
+    return Object.keys(DOCS).some(function (k) { return DOCS[k].file === file && k !== "cookies" && k !== "deletion" && k !== "disclaimer"; });
+  }
+
+  function keyForFile(file) {
+    const k = Object.keys(DOCS).filter(function (x) { return DOCS[x].file === file; });
+    return k[0] || "privacy";
+  }
+
+  /* ---------- Load a document (fetched once, then cached) ---------- */
+  function load(file) {
+    if (cache[file]) return cache[file];
+    cache[file] = fetch(file)
+      .then(function (res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.text();
+      })
+      .then(function (text) {
+        const doc = new DOMParser().parseFromString(text, "text/html");
+        const main = doc.querySelector(".legal-body") || doc.querySelector("main");
+        if (!main) throw new Error("content not found");
+        main.querySelectorAll(".back-link").forEach(function (el) { el.remove(); });
+        const updated = doc.querySelector("#lastUpdated");
+        return { html: main.innerHTML, updated: updated ? updated.textContent.trim() : "" };
+      });
+    return cache[file];
+  }
+
+  function scrollInBody(id) {
+    if (!body) return;
+    const target = body.querySelector("#" + (window.CSS && CSS.escape ? CSS.escape(id) : id));
+    if (target) body.scrollTop = Math.max(0, target.offsetTop - 14);
+  }
+
+  /* ---------- Open / close ---------- */
+  function open(key, anchor) {
+    const doc = DOCS[key];
+    if (!doc) return;
+    build();
+
+    if (currentKey === key) { close(); return; }   // same button again = close
+
+    currentKey = key;
+    if (!lastTrigger) lastTrigger = document.activeElement;
+    syncTriggers();
+
+    titleEl.textContent = doc.title;
+    fullLink.href = doc.url;
+    updatedEl.textContent = "";
+    body.innerHTML = '<p class="modal-loading">Loading…</p>';
+    modal.removeAttribute("hidden");
+    document.body.classList.add("modal-open");
+    modal.querySelector(".modal-close").focus();
+
+    const wanted = anchor || doc.anchor;
+
+    load(doc.file)
+      .then(function (res) {
+        if (currentKey !== key) return;          // visitor switched documents
+        body.innerHTML = res.html;
+        updatedEl.textContent = res.updated ? "Last updated: " + res.updated : "";
+        body.scrollTop = 0;
+        if (wanted) setTimeout(function () { scrollInBody(wanted); }, 30);
+      })
+      .catch(function () {
+        body.innerHTML =
+          '<p>This document could not be loaded here — please open the full page instead:</p>' +
+          '<p><a class="btn btn-primary" href="' + doc.url + '" target="_blank" rel="noopener">Open ' +
+          doc.title + '</a></p>';
+      });
+  }
+
+  function close() {
+    if (!modal || !currentKey) return;
+    modal.setAttribute("hidden", "");
+    document.body.classList.remove("modal-open");
+    currentKey = null;
+    syncTriggers();
+    if (lastTrigger && typeof lastTrigger.focus === "function") lastTrigger.focus();
+    lastTrigger = null;
+  }
+
+  function syncTriggers() {
+    document.querySelectorAll("[data-doc]").forEach(function (el) {
+      el.setAttribute("aria-expanded", el.getAttribute("data-doc") === currentKey ? "true" : "false");
+    });
+  }
+
+  /* ---------- Bind every button and link that opens a document ---------- */
+  let inited = false;
+
+  function init() {
+    if (inited) return;          // never bind the same handler twice
+    inited = true;
+
+    document.addEventListener("click", function (e) {
+      const trigger = e.target.closest("[data-doc]");
+      if (!trigger) return;
+      e.preventDefault();
+      open(trigger.getAttribute("data-doc"));
+    });
+
+    /* Links inside the consent label: open the pop-up and, importantly, do not
+       let the click tick or untick the consent checkbox. Handled entirely here
+       (stopPropagation keeps the delegated handler above from double-firing). */
+    document.querySelectorAll(".consent-box a").forEach(function (a) {
+      const href = a.getAttribute("href") || "";
+      const file = href.split("#")[0];
+      const key = { "privacy-policy.html": "privacy", "terms.html": "terms", "data-security.html": "security" }[file];
+      if (!key) return;
+      a.setAttribute("data-doc", key);
+      a.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        open(key);
+      });
+    });
+  }
+
+  return { init: init, open: open, close: close };
+})();
+
 /* ---------- Small helpers ---------- */
 const isPlaceholder = (v) =>
   !v || /YOUR_|yourdomain\.com|919999999999/i.test(String(v));
@@ -769,6 +970,7 @@ document.addEventListener("DOMContentLoaded", function () {
   applyImages();
   applySite();
   configWarning();
+  Docs.init();              // legal documents open in a pop-up
   initVideo();
   initForm();
   initThankYou();

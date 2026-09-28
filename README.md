@@ -18,6 +18,8 @@ No build step, no framework, no dependencies — upload the folder and it runs.
 | `thank-you.html` | Confirmation page shown after the form is submitted |
 | `robots.txt`, `sitemap.xml` | Search engine basics — update the domain inside both files |
 
+The four legal/policy documents are also readable from the footer as pop-ups — see below.
+
 ---
 
 ## ⚙️ Setup — edit ONE file
@@ -104,6 +106,32 @@ const PIXEL = {
 
 Leave `pixelId` empty and the whole tracking layer stays switched off — nothing is loaded and
 nothing is sent.
+
+---
+
+## 📄 Legal documents open in a pop-up
+
+The legal pages are not scattered across the main page any more. They live at the foot of the
+footer as six small buttons:
+
+`Privacy Policy` · `Terms & Conditions` · `Data Security` · `Cookies & Tracking` ·
+`Disclaimer` · `Delete My Data`
+
+* Tap a button and the document opens in a pop-up on the same page.
+* Tap **the same button again** and the pop-up closes.
+* Tap a different button and it switches document inside the same pop-up.
+* `Esc`, the × button or a tap on the dark backdrop also close it.
+* Links inside a document (for example "Privacy Policy → section 9") open in the same pop-up, so a
+  visitor never loses their place in the page.
+* Links in the form's consent line open the same pop-up, and importantly they no longer tick or
+  untick the consent checkbox by accident.
+* If the pop-up cannot load its content (very old browser, or the page opened straight from a file),
+  it falls back to a link that opens the standalone page.
+
+The standalone pages still exist at their own URLs — `privacy-policy.html`, `terms.html`,
+`data-security.html` — because Meta ad review needs a directly linkable policy URL, and so does
+anyone with the link in an email. Content is written once, in those pages, and the pop-up reuses it,
+so there is nothing to keep in sync.
 
 ---
 
@@ -259,5 +287,6 @@ assets/
 * Form validation with inline errors, a success state and a WhatsApp fallback
 * One-tap conversion tracking: any Telegram button counts once per visitor; WhatsApp support is excluded
 * Cookie consent banner available as a single config flag, with the pixel gated behind it
-* All content remains visible if JavaScript is blocked
+* Legal documents open in an accessible pop-up (`aria-expanded`, Esc to close, focus returned to the button)
+* All content remains visible if JavaScript is blocked — and every legal document still has its own URL
 * Print-friendly legal pages
