@@ -1,51 +1,171 @@
-# HandWrite Work — Handwriting Work From Home Landing Page
+# HandWrite Work — Work-From-Home Handwriting Programme
 
-Mobile-responsive landing page for a handwriting work-from-home opportunity, ready for Meta (Facebook) ads.
+A fast, mobile-first static website for a work-from-home handwriting work programme, built for
+Meta (Facebook) advertising. Written in **British English** throughout.
+
+No build step, no framework, no dependencies — upload the folder and it runs.
+
+---
 
 ## Pages
 
-| File               | Kya hai                                        |
-|--------------------|------------------------------------------------|
-| `index.html`       | Main landing page (Hinglish) — hero, kaam ki jankari, process, FAQ, application form, Telegram + WhatsApp buttons |
-| `privacy-policy.html` | Privacy Policy (Hindi + English) — Meta ads compliance ke liye |
-| `terms.html`       | Terms & Conditions + Disclaimer (Hindi + English) |
+| File | What it is |
+|---|---|
+| `index.html` | Main landing page — hero, verified strip, how it works, the work, requirements, payouts, video, channels, trust, FAQ, application form |
+| `privacy-policy.html` | Privacy Policy — what data is collected, lawful basis, retention, your rights |
+| `terms.html` | Terms & Conditions + full disclaimer (not a government job, no income guarantee, no fees) |
+| `data-security.html` | Data Security — access controls, payment safety, fraud warnings, data deletion requests |
+| `thank-you.html` | Confirmation page shown after the form is submitted |
+| `robots.txt`, `sitemap.xml` | Search engine basics — update the domain inside both files |
 
-## ⚙️ Sabse Zaroori — Links Update Karein
+---
 
-`assets/js/main.js` file kholiye aur upar `CONFIG` me apni details daaliye:
+## ⚙️ Setup — edit ONE file
+
+Open **`assets/js/main.js`**. Everything you need to change is at the top, in three blocks.
+
+### 1. Images — `IMAGES`
+
+Change a link here and it updates **everywhere on the site** (hero, sections, video poster,
+favicon, social-share picture). No HTML editing required.
 
 ```js
-const CONFIG = {
-  telegramUrl: "https://t.me/YOUR_TELEGRAM_CHANNEL",  // ← apna Telegram link
-  whatsappNumber: "919999999999",                     // ← apna WhatsApp number (country code ke saath, sirf digits)
-  supportEmail: "support@example.com",                // ← apna email
-  formEndpoint: "",                                   // ← optional (neeche dekhein)
+const IMAGES = {
+  hero:        "assets/images/hero.jpg",          // big photo at the top
+  workSample:  "assets/images/work-sample.jpg",   // close-up of handwriting
+  deskSetup:   "assets/images/desk-setup.jpg",    // desk flat-lay
+  videoPoster: "assets/images/video-poster.jpg",  // shown before the video plays
+  favicon:     "assets/images/favicon.svg",       // browser tab icon
+  socialShare: "assets/images/hero.jpg",          // preview image in WhatsApp / Facebook
 };
 ```
 
-Bas! Header, hero, form, footer aur sticky mobile bar ke saare buttons automatic update ho jayenge.
+You can use either:
 
-## 📝 Form ke 2 Options
+* **a local file** — drop your new picture into `assets/images/` and point to it, e.g.
+  `"assets/images/my-new-photo.jpg"`, **or**
+* **a full online URL** — e.g. `"https://images.example.com/photo.jpg"`,
+  or a link from Imgur / Cloudinary / your own CDN or hosting.
 
-1. **Bina backend (default):** Form validate hokar success dikhata hai, aur "WhatsApp Par Bhejein" button ke through application aapke WhatsApp par prefilled message ke saath aa jati hai. Application browser me backup ke liye `localStorage` me bhi save hoti hai.
-2. **Formspree/Basemodels jaisa form endpoint:** Free account banayein, apna form URL `CONFIG.formEndpoint` me daal dein — submission seedha aapke email/dashboard me jayegi.
+Recommended sizes: hero and section photos around **1500 × 1125 px** (4:3), video poster
+**1920 × 1080 px** (16:9). Keep each file under about 300 KB so the page stays fast on mobile.
 
-## 🚀 Hosting
+> If you replace a file but keep the same name, you may need to hard-refresh (Ctrl/Cmd + Shift + R)
+> to clear the browser cache.
 
-Static site hai — kisi bhi free hosting par deploy kar sakte hain:
-- **Netlify / Vercel / GitHub Pages** — folder upload karo, bas.
-- Domain lena best rahega (ads ke liye `https://` zaroori hai).
+### 2. Links and contact details — `SITE`
 
-## 📱 Meta Ads Compliance Checklist
+```js
+const SITE = {
+  telegramUrl:   "https://t.me/YOUR_TELEGRAM_CHANNEL", // main channel — applications + work
+  whatsappNumber: "919999999999",                      // SUPPORT ONLY — digits, with country code
+  supportEmail:  "support@yourdomain.com",
+  companyName:   "HandWrite Work",
+  supportHours:  "10:00 AM – 7:00 PM (Mon–Sat)",
+  formEndpoint:  "",                                   // optional — see below
+  supportMessage: "Hello! I have a question about the handwriting work programme.",
+  applyMessage:   "Hello! I would like to apply for the handwriting work programme.",
+};
+```
 
-- [x] Privacy Policy page (live link footer + form consent me)
-- [x] Terms & Conditions + Disclaimer page
-- [x] "Not a government job" disclaimer
-- [x] Koi income guarantee nahi — "earning depends on your work"
-- [x] Consent checkbox (18+ + privacy policy agree) form me
-- [x] Clear contact options (WhatsApp, Telegram, Email)
-- [x] "Koi fee nahi / hum paise nahi maangte" trust notice
-- [x] 100% mobile responsive
-- [x] Open Graph tags (ads preview ke liye)
+Save the file and every button, footer link, legal-page contact and the sticky mobile bar update
+automatically. **Telegram is the main channel for applications and work; WhatsApp is support only.**
 
-> Suggestion: Ads chalate time `og:image` ke liye page ka final screenshot/hosted image URL daal dein (abhi relative path hai).
+### 3. Video — `VIDEO`
+
+```js
+const VIDEO = {
+  youtubeUrl: "",   // e.g. "https://www.youtube.com/watch?v=XXXXXXXXXXX"
+  mp4Url:     "",   // or a direct video file link
+  posterKey:  "videoPoster",
+  title:      "Watch: how the work is done",
+  caption:    "A 2-minute walkthrough — the work, the quality check and the payout.",
+};
+```
+
+Fill in **one** of the two. YouTube (including unlisted videos and `youtu.be` links) plays in a
+privacy-friendly embed on click; an MP4 plays in the browser's own player. Until you add a link, the
+video section still looks complete — clicking it shows a small "video link will be added shortly"
+note.
+
+---
+
+## 📝 The application form
+
+**Default behaviour (no setup):** the form validates, saves a copy in the applicant's own browser,
+shows a thank-you message and then moves to `thank-you.html`, where the applicant can send their
+details to you on WhatsApp with one tap.
+
+**To receive applications directly in your email or a spreadsheet:** create a free form service
+(Formspree, Basemodels, or a Google Apps Script endpoint) and paste its URL into
+`SITE.formEndpoint`. Applications are then sent there automatically and the applicant is taken
+straight to `thank-you.html`.
+
+Spam protection: the form includes a hidden honeypot field that silently blocks bot submissions.
+
+---
+
+## 🚀 Deployment
+
+It is a static website, so any free host works:
+
+* **Netlify / Cloudflare Pages / Vercel** — drag the folder in, or connect this GitHub repository.
+* **GitHub Pages** — Settings → Pages → deploy from the `main` branch.
+
+Before running ads:
+
+1. Use **HTTPS** (all the hosts above give it free).
+2. Update the domain in `robots.txt`, `sitemap.xml` and the `og:url` / `og:image` tags in
+   `index.html` to full `https://` URLs — Meta needs absolute URLs for ad previews.
+3. Add your Telegram, WhatsApp and email details in `assets/js/main.js` (see above). While they are
+   placeholders, an orange "Setup needed" bar appears at the top of the site as a reminder — it
+   disappears on its own once real details are saved.
+4. Test the form end to end, and test the Telegram and WhatsApp buttons on a real phone.
+
+---
+
+## ✅ Meta (Facebook) ads compliance checklist
+
+- [x] Privacy Policy, Terms & Conditions and Data Security pages, all linked in the footer and in the form consent
+- [x] Clear "not a government job, not a government scheme" disclaimer on every page
+- [x] No income guarantee — earnings described as dependent on hours worked and quality
+- [x] No fees stated as a trust promise ("we never ask for money")
+- [x] No payment details collected anywhere on the website
+- [x] Consent checkbox (18+ and Privacy Policy agreement) on the form
+- [x] Clear contact routes (WhatsApp support, Telegram, email)
+- [x] 100% mobile responsive, Open Graph tags, favicon, sitemap and robots.txt
+- [ ] Meta Pixel added before running ads (then update the Privacy Policy's cookies section — it is already drafted to cover this)
+
+---
+
+## 🗂 Project structure
+
+```
+index.html
+privacy-policy.html
+terms.html
+data-security.html
+thank-you.html
+robots.txt
+sitemap.xml
+README.md
+assets/
+  css/style.css          ← design system, mobile-first
+  js/main.js             ← ★ the only file you need to edit
+  images/
+    hero.jpg
+    work-sample.jpg
+    desk-setup.jpg
+    video-poster.jpg
+    favicon.svg
+```
+
+---
+
+## 🧰 Built-in behaviour
+
+* Sticky header with active-section highlighting; sticky Apply/Telegram/Support bar on mobile
+* Scroll-reveal animations that switch off automatically for visitors who prefer reduced motion
+* Form validation with inline errors, a success state and a WhatsApp fallback
+* All content remains visible if JavaScript is blocked
+* Print-friendly legal pages
