@@ -711,24 +711,6 @@ function applySite() {
   }
 }
 
-/* ---------- Warn (only) while placeholder details are still in use ---------- */
-function configWarning() {
-  const missing = [];
-  if (!PIXEL.pixelId) missing.push("Meta Pixel ID");
-  if (isPlaceholder(SITE.telegramUrl)) missing.push("Telegram link");
-  if (isPlaceholder(SITE.whatsappNumber)) missing.push("WhatsApp number");
-  if (isPlaceholder(SITE.supportEmail)) missing.push("support email");
-  if (!missing.length) return;
-
-  const bar = document.createElement("div");
-  bar.className = "config-bar";
-  bar.innerHTML =
-    '<strong>Setup needed:</strong> add your ' + missing.join(", ") +
-    ' in <code>assets/js/main.js</code> — this bar disappears automatically once real details are saved.' +
-    (PIXEL.pixelId ? "" : " (Tracking stays off until the Pixel ID is added.)");
-  document.body.prepend(bar);
-}
-
 /* ---------- Video ---------- */
 function initVideo() {
   const stage = document.getElementById("videoStage");
@@ -969,7 +951,6 @@ document.addEventListener("DOMContentLoaded", function () {
   window.HW_Tracking = Tracking;
   applyImages();
   applySite();
-  configWarning();
   Docs.init();              // legal documents open in a pop-up
   initVideo();
   initForm();
