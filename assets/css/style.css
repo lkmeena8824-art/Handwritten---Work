@@ -141,12 +141,6 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .header-cta .btn-ghost { display: none; }
 
 /* ---------- Setup warning bar (disappears once config is filled) ---------- */
-.config-bar {
-  background: #fff4e5; color: #7a4b00; border-bottom: 1px solid #ffd8a8;
-  font-size: .84rem; padding: .6rem 1.15rem; text-align: center;
-}
-.config-bar code { background: rgba(0,0,0,.06); padding: .1rem .35rem; border-radius: 5px; font-size: .82em; }
-
 /* ---------- Hero ---------- */
 .hero {
   position: relative; overflow: hidden;
@@ -705,6 +699,6 @@ body.modal-open { overflow: hidden; }
 
 /* ---------- Print ---------- */
 @media print {
-  .site-header, .sticky-bar, .float-wa, .config-bar, .final-cta { display: none !important; }
+  .site-header, .sticky-bar, .float-wa, .final-cta { display: none !important; }
   body { background: #fff; }
 }
